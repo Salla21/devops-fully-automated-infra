@@ -1,0 +1,134 @@
+
+https://github.com/tdolivierth7/devops-fully-automated-infra/tree/main
+git config --global user.name "tdolivierth7"
+git config --global user.email "tdolivierth14@gmail.com"
+
+
+Creating Jenkins Server:
+AMI: Amzaon Linux 2
+type: t2.large
+User Data to Install Jenkins:
+https://github.com/cvamsikrishna11/devops-fully-automated/blob/installations/jenkins-maven-ansible-setup.sh
+
+50ab9cd0d941483d9542ff03a3f260a5
+
+Test Script:
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello World'
+                sh 'sudo yum install tree -y'
+            }
+        }
+        stage('terraform verification'){
+            steps{
+                sh 'terraform --version'
+            }
+        }
+    }
+}
+=============================================
+=============================================
+INSTALLING AND SCANNING WITH CHECKOV:
+
+CHECKOV RESOURCES:
+Checkov Website: https://www.checkov.io/
+Installing Checkov: https://www.checkov.io/2.Basics/Installing%20Checkov.html
+Checkov terraform resource scans: https://www.checkov.io/5.Policy%20Index/terraform.html
+Checkov GitHub: https://github.com/bridgecrewio/checkov
+Checkov Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-networking-policies/networking-1-port-security
+
+
+SCANNING WITH CHECKOV:
+Add the following block as a stage in the Jenkinsfile:
+
+stage('Checkov scan') {
+    steps {
+sh """                
+sudo pip3 install --upgrade pip
+# pip3 install --upgrade pip && pip3 install --upgrade setuptools
+sudo pip3 install checkov
+checkov -d .
+#checkov -d . --skip-check CKV_AWS_23,CKV_AWS_24,CKV_AWS_126,CKV_AWS_135,CKV_AWS_8,CKV_AWS_23,CKV_AWS_24
+#checkov -d . --skip-check CKV_AWS*
+"""
+    }
+}
+
+SYNTAX EXPLAINED:
+
+# Syntax to run checkov should be checkov --directory DirectoryName. Example: checkov -d . --skip-check CKV_AWS_20
+# When no scan is specified, checkov scans the directory specified for all scans. Example: checkov -d . 
+# We can use -d as a shortcut for --directory. Example: checkov -d .
+# . stands for current directory
+# We can either scan for specific checks or we can scan for all checks except specific ones. Example: checkov --directory . --check CKV_AWS_20,CKV_AWS_57 OR checkov -d . --skip-check CKV_AWS_20
+
+=============================================
+ADDING WEBHOOK TO GITHUB REPOSITORY
+---------------------------------------------
+> ON THE GITHUB REPOSITORY:
+SETTINGS --> WEBHOOKS --> ADD WEBHOOK
+Payload URL:
+http://3.90.15.61:8080/github-webhook/
+
+> ON THE JENKINS SERVER:
+Navigate to the Dashboard -> Click the Jenkins Project - Select 'Configure'.
+Ensure we are in the section "General"
+Check the following box in the Configuration of the Jenkins Pipeline project: GitHub Project
+-In the box 'Project URL' Enter the URL of the GitHub Repository.
+- Under 'Build Triggers' select: 
+GitHub hook trigger for GITScm polling
+
+ABOUT "GitHub hook trigger for GITScm polling":
+"When Jenkins receives a GitHub push hook, GitHub Plugin checks to see whether the hook came from a GitHub repository which matches the Git repository defined in SCM/Git section of this job. If they match and this option is enabled, GitHub Plugin triggers a one-time polling on GITScm. When GITScm polls GitHub, it finds that there is a change and initiates a build. The last sentence describes the behavior of Git plugin, thus the polling and initiating the build is not a part of GitHub plugin."
+
+---------------------------------------------
+To View Logs from a Build:
+Click the Built number. Example: #3
+In the Left Panel, click: Console Output
+---------------------------------------------
+
+Commands to run to push Code after making changing the code on the local:
+
+git status
+git add .
+git commit -m "Commit Message"
+git push
+
+=============================================
+ADDING SLACK NOTIFICATIONS
+
+ON SLACK:
+Join Slack Channel using the provided Channel Invitation Link
+
+ON THE JENKINS SERVER:
+Go to the Jenkins Dashboard.
+Go to: Manage Jenkins --> Plugins --> Available Plugins
+Search: Slack
+Select 'Slack Notifications'
+Click 'Install'
+
+Go Back to the Jenkins Dashboard.
+Click 'System'
+Scroll all the way down inthe System Page and find the 'Slack' section.
+---------------
+CONFIGURING JENKINS WITH SLACK:
+Workspace: As Workspace, provide the Slack workspace provided.
+
+How to create a new workspace in slack:
+https://slack.com/help/articles/206845317-Create-a-Slack-workspace
+
+Credentials: Click 'Add', then select 'Jenkins'.
+Enter the following information:
+
+Kind: Secret text
+Secret: Provided secret. Example: 3jrfd3GjdMac0dgcxJwcOgQU
+ID: Provided ID. Example: slack-token
+Description: Provided Description. Example: slack-token
+Click on Add
+
+Back to the Slack Section, in the Credentials box, click the drop down button and select ID of the new Credentials that were added.
